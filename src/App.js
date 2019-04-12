@@ -35,8 +35,27 @@ class App extends Component {
         if (shelf) shelf.books.push(book);
         return state;
       });
+      return true;
     });
   }
+
+  changeBookShelf = (book, newShelfValue) => {
+    if (newShelfValue !== book.shelf) {
+      this.setState(state => {
+        // Remove from old shelf
+        let oldShelf = state.shelves.find(sh => sh.value === book.shelf);
+        oldShelf.books = oldShelf.books.filter(b => b.id !== book.id);
+        book.shelf = newShelfValue;
+        if (newShelfValue !== 'none') {
+          // Add to new shelf
+          let newShelf = state.shelves.find(sh => sh.value === newShelfValue);
+          if (!newShelf.books.find(b => b.id === book.id))
+            newShelf.books.push(book);
+        }
+        return state;
+      });
+    }
+  };
 
   render() {
     return (
@@ -45,7 +64,10 @@ class App extends Component {
           <h1>MyReads</h1>
         </div>
         <div className="list-books-content">
-          <Shelves shelves={this.state.shelves} />
+          <Shelves
+            shelves={this.state.shelves}
+            changeBookShelf={this.changeBookShelf}
+          />
         </div>
       </div>
     );
