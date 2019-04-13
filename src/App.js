@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Route, Link } from 'react-router-dom';
 import * as BooksAPI from './BooksAPI';
 import Shelves from './Shelves';
+import Book from './Book';
 import './App.css';
 
 class App extends Component {
@@ -25,10 +26,11 @@ class App extends Component {
         key: 3,
         books: []
       }
-    ]
+    ],
+    searchedBooks: []
   };
 
-  async componentDidMount() {
+  filterBooks = async () => {
     let books = await BooksAPI.getAll();
     books.map(book => {
       this.setState(state => {
@@ -38,24 +40,39 @@ class App extends Component {
       });
       return true;
     });
+  };
+
+  async componentDidMount() {
+    await this.filterBooks();
   }
 
   changeBookShelf = (book, newShelfValue) => {
     if (newShelfValue !== book.shelf) {
-      this.setState(state => {
+      this.setState(async state => {
         // Remove from old shelf
         let oldShelf = state.shelves.find(sh => sh.value === book.shelf);
-        oldShelf.books = oldShelf.books.filter(b => b.id !== book.id);
-        book.shelf = newShelfValue;
+        if (oldShelf) {
+          oldShelf.books = oldShelf.books.filter(b => b.id !== book.id);
+        }
         if (newShelfValue !== 'none') {
           // Add to new shelf
           let newShelf = state.shelves.find(sh => sh.value === newShelfValue);
-          if (!newShelf.books.find(b => b.id === book.id))
-            newShelf.books.push(book);
+          // if (!newShelf.books.find(b => b.id === book.id))
+          newShelf.books.push(book);
         }
+        // Update book shelf by overriding and via api
+        book.shelf = newShelfValue;
+        await BooksAPI.update(book, newShelfValue);
         return state;
       });
     }
+  };
+
+  searchInput = async event => {
+    let books = await BooksAPI.search(event.target.value);
+    this.setState({
+      searchedBooks: books
+    });
   };
 
   render() {
@@ -71,11 +88,28 @@ class App extends Component {
                   Close
                 </Link>
                 <div className="search-books-input-wrapper">
-                  <input type="text" placeholder="Search by title or author" />
+                  <input
+                    type="text"
+                    placeholder="Search by title or author"
+                    onChange={this.searchInput}
+                  />
                 </div>
               </div>
               <div className="search-books-results">
-                <ol className="books-grid" />
+                <ol className="books-grid">
+                  {this.state.searchedBooks.length ? (
+                    this.state.searchedBooks.map(book => (
+                      <li key={book.id}>
+                        <Book
+                          book={book}
+                          changeBookShelf={this.changeBookShelf}
+                        />
+                      </li>
+                    ))
+                  ) : (
+                    <p>No results</p>
+                  )}
+                </ol>
               </div>
             </div>
           )}
